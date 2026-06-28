@@ -1,0 +1,1408 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Nakuru Veterans FC – Management System</title>
+<script src="https://unpkg.com/react@18/umd/react.development.js"></script>
+<script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+<script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<!-- Firebase -->
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+  import { getFirestore, collection, addDoc, getDocs, doc, updateDoc, deleteDoc, onSnapshot, query, orderBy, Timestamp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+  import { getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+
+  // ── PASTE YOUR FIREBASE CONFIG HERE ──────────────────────────────────────────
+  const firebaseConfig = {
+    apiKey: "YOUR_API_KEY",
+    authDomain: "YOUR_AUTH_DOMAIN",
+    projectId: "YOUR_PROJECT_ID",
+    storageBucket: "YOUR_STORAGE_BUCKET",
+    messagingSenderId: "YOUR_MESSAGING_SENDER_ID",
+    appId: "YOUR_APP_ID"
+  };
+  // ─────────────────────────────────────────────────────────────────────────────
+
+  const app = initializeApp(firebaseConfig);
+  const db  = getFirestore(app);
+  const auth = getAuth(app);
+
+  window.__firebase = { db, auth, collection, addDoc, getDocs, doc, updateDoc, deleteDoc, onSnapshot, query, orderBy, Timestamp, signInWithEmailAndPassword, signOut, onAuthStateChanged };
+</script>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Inter:wght@300;400;500;600;700&family=Roboto+Mono:wght@400;600&display=swap');
+
+  :root {
+    --navy:   #0D1B3E;
+    --navy2:  #162247;
+    --navy3:  #1E2F5C;
+    --red:    #D63B2F;
+    --orange: #E8511E;
+    --gold:   #F5A623;
+    --white:  #FFFFFF;
+    --silver: #C8D0E0;
+    --muted:  #7A8BAA;
+    --bg:     #080E20;
+    --card:   #111C38;
+    --card2:  #162040;
+    --border: #1E2F5C;
+    --green:  #22C55E;
+    --danger: #EF4444;
+    --radius: 12px;
+    --shadow: 0 4px 24px rgba(0,0,0,0.4);
+  }
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'Inter', sans-serif;
+    background: var(--bg);
+    color: var(--white);
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* ── SCROLLBAR ── */
+  ::-webkit-scrollbar { width: 6px; }
+  ::-webkit-scrollbar-track { background: var(--navy); }
+  ::-webkit-scrollbar-thumb { background: var(--navy3); border-radius: 3px; }
+
+  /* ── LOGIN ── */
+  .login-wrap {
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: radial-gradient(ellipse at 60% 0%, #1a2f6e 0%, var(--bg) 70%);
+    position: relative;
+    overflow: hidden;
+  }
+  .login-wrap::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: repeating-linear-gradient(
+      -55deg,
+      transparent,
+      transparent 40px,
+      rgba(255,255,255,0.015) 40px,
+      rgba(255,255,255,0.015) 41px
+    );
+  }
+  .login-card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    padding: 48px 40px;
+    width: 100%;
+    max-width: 400px;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.6);
+    position: relative;
+    z-index: 1;
+  }
+  .login-badge {
+    width: 80px;
+    height: 80px;
+    background: linear-gradient(135deg, var(--red), var(--orange));
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 36px;
+    margin: 0 auto 20px;
+    box-shadow: 0 0 40px rgba(214,59,47,0.4);
+  }
+  .login-title { font-family: 'Bebas Neue', sans-serif; font-size: 28px; letter-spacing: 2px; text-align: center; color: var(--white); margin-bottom: 4px; }
+  .login-sub { text-align: center; color: var(--muted); font-size: 13px; margin-bottom: 32px; }
+  .form-group { margin-bottom: 18px; }
+  .form-group label { display: block; font-size: 12px; font-weight: 600; color: var(--silver); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 8px; }
+  .form-control {
+    width: 100%;
+    background: var(--navy);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 12px 16px;
+    color: var(--white);
+    font-size: 14px;
+    font-family: 'Inter', sans-serif;
+    transition: border-color 0.2s;
+    outline: none;
+  }
+  .form-control:focus { border-color: var(--red); }
+  .form-control::placeholder { color: var(--muted); }
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 12px 24px;
+    border-radius: 8px;
+    border: none;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+    font-family: 'Inter', sans-serif;
+  }
+  .btn-primary { background: linear-gradient(135deg, var(--red), var(--orange)); color: #fff; width: 100%; }
+  .btn-primary:hover { opacity: 0.9; transform: translateY(-1px); }
+  .btn-sm { padding: 7px 14px; font-size: 12px; border-radius: 6px; }
+  .btn-ghost { background: transparent; color: var(--silver); border: 1px solid var(--border); }
+  .btn-ghost:hover { background: var(--navy3); }
+  .btn-danger { background: var(--danger); color: #fff; }
+  .btn-danger:hover { opacity: 0.9; }
+  .btn-success { background: var(--green); color: #fff; }
+  .btn-success:hover { opacity: 0.9; }
+  .btn-outline { background: transparent; border: 1px solid var(--red); color: var(--red); }
+  .btn-outline:hover { background: var(--red); color: #fff; }
+  .error-msg { color: var(--danger); font-size: 13px; text-align: center; margin-top: 12px; }
+
+  /* ── LAYOUT ── */
+  .app-wrap { display: flex; min-height: 100vh; }
+
+  /* ── SIDEBAR ── */
+  .sidebar {
+    width: 240px;
+    background: var(--card);
+    border-right: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    position: fixed;
+    top: 0; left: 0;
+    height: 100vh;
+    z-index: 100;
+    transition: transform 0.3s;
+  }
+  .sidebar-logo {
+    padding: 24px 20px;
+    border-bottom: 1px solid var(--border);
+  }
+  .sidebar-club {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 18px;
+    letter-spacing: 2px;
+    color: var(--white);
+    line-height: 1.1;
+  }
+  .sidebar-sub { font-size: 10px; color: var(--muted); letter-spacing: 1px; }
+  .badge-strip {
+    width: 40px; height: 4px;
+    background: linear-gradient(90deg, var(--red), var(--orange));
+    border-radius: 2px;
+    margin-top: 8px;
+  }
+  .nav-section { padding: 16px 12px 8px; font-size: 10px; font-weight: 700; color: var(--muted); letter-spacing: 1.5px; text-transform: uppercase; }
+  .nav-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 16px;
+    margin: 2px 8px;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.2s;
+    color: var(--muted);
+    font-size: 14px;
+    font-weight: 500;
+  }
+  .nav-item:hover { background: var(--navy3); color: var(--white); }
+  .nav-item.active { background: linear-gradient(135deg, var(--red)22, var(--orange)11); color: var(--white); border-left: 3px solid var(--red); }
+  .nav-icon { font-size: 18px; width: 20px; text-align: center; }
+  .sidebar-footer { margin-top: auto; padding: 16px; border-top: 1px solid var(--border); }
+  .admin-chip { display: flex; align-items: center; gap: 10px; }
+  .admin-avatar { width: 36px; height: 36px; background: linear-gradient(135deg, var(--red), var(--orange)); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 14px; }
+  .admin-name { font-size: 13px; font-weight: 600; }
+  .admin-role { font-size: 11px; color: var(--muted); }
+
+  /* ── MAIN ── */
+  .main-content { margin-left: 240px; flex: 1; padding: 0; }
+  .topbar {
+    background: var(--card);
+    border-bottom: 1px solid var(--border);
+    padding: 16px 28px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    position: sticky;
+    top: 0;
+    z-index: 50;
+  }
+  .topbar-title { font-family: 'Bebas Neue', sans-serif; font-size: 22px; letter-spacing: 2px; }
+  .topbar-actions { display: flex; gap: 10px; align-items: center; }
+  .page-body { padding: 28px; }
+
+  /* ── STATS GRID ── */
+  .stats-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 16px; margin-bottom: 28px; }
+  .stat-card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 20px;
+    position: relative;
+    overflow: hidden;
+    transition: transform 0.2s;
+  }
+  .stat-card:hover { transform: translateY(-2px); }
+  .stat-card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 3px;
+  }
+  .stat-card.red::before   { background: linear-gradient(90deg, var(--red), var(--orange)); }
+  .stat-card.green::before { background: var(--green); }
+  .stat-card.gold::before  { background: var(--gold); }
+  .stat-card.blue::before  { background: #3B82F6; }
+  .stat-label { font-size: 11px; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 8px; }
+  .stat-value { font-family: 'Bebas Neue', sans-serif; font-size: 36px; letter-spacing: 1px; line-height: 1; }
+  .stat-sub { font-size: 12px; color: var(--muted); margin-top: 4px; }
+
+  /* ── CHART CARD ── */
+  .chart-grid { display: grid; grid-template-columns: 2fr 1fr; gap: 16px; margin-bottom: 28px; }
+  .chart-card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 20px;
+  }
+  .chart-title { font-weight: 600; margin-bottom: 16px; font-size: 14px; color: var(--silver); }
+
+  /* ── TABLE ── */
+  .table-card { background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; }
+  .table-header { padding: 16px 20px; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid var(--border); }
+  .table-title { font-weight: 600; font-size: 15px; }
+  table { width: 100%; border-collapse: collapse; }
+  thead tr { background: var(--navy); }
+  th { padding: 12px 16px; text-align: left; font-size: 11px; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: 1px; }
+  td { padding: 13px 16px; font-size: 13px; border-bottom: 1px solid var(--border); }
+  tr:last-child td { border-bottom: none; }
+  tr:hover td { background: var(--navy); }
+  .badge {
+    display: inline-block;
+    padding: 3px 10px;
+    border-radius: 20px;
+    font-size: 11px;
+    font-weight: 600;
+  }
+  .badge-active   { background: #22C55E22; color: var(--green); border: 1px solid #22C55E44; }
+  .badge-inactive { background: #EF444422; color: var(--danger); border: 1px solid #EF444444; }
+  .badge-paid     { background: #22C55E22; color: var(--green); border: 1px solid #22C55E44; }
+  .badge-pending  { background: #F5A62322; color: var(--gold); border: 1px solid #F5A62344; }
+
+  /* ── MEMBER AVATAR ── */
+  .member-row { display: flex; align-items: center; gap: 12px; }
+  .avatar {
+    width: 36px; height: 36px;
+    background: linear-gradient(135deg, var(--navy3), var(--navy));
+    border: 2px solid var(--border);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+    font-size: 13px;
+    flex-shrink: 0;
+    overflow: hidden;
+  }
+  .avatar img { width: 100%; height: 100%; object-fit: cover; }
+  .member-name { font-weight: 600; font-size: 13px; }
+  .member-pos  { font-size: 11px; color: var(--muted); }
+  .jersey { font-family: 'Bebas Neue', sans-serif; font-size: 18px; color: var(--red); }
+
+  /* ── MODAL ── */
+  .modal-overlay {
+    position: fixed; inset: 0;
+    background: rgba(0,0,0,0.7);
+    backdrop-filter: blur(4px);
+    z-index: 200;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+  }
+  .modal {
+    background: var(--card2);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    width: 100%;
+    max-width: 540px;
+    max-height: 90vh;
+    overflow-y: auto;
+    box-shadow: 0 24px 60px rgba(0,0,0,0.6);
+  }
+  .modal-header {
+    padding: 20px 24px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .modal-title { font-family: 'Bebas Neue', sans-serif; font-size: 20px; letter-spacing: 1px; }
+  .modal-body { padding: 24px; }
+  .modal-footer { padding: 16px 24px; border-top: 1px solid var(--border); display: flex; gap: 10px; justify-content: flex-end; }
+  .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+  .close-btn { background: none; border: none; color: var(--muted); font-size: 20px; cursor: pointer; padding: 4px; }
+  .close-btn:hover { color: var(--white); }
+
+  /* ── PROFILE ── */
+  .profile-header {
+    background: linear-gradient(135deg, var(--navy2), var(--navy3));
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 28px;
+    display: flex;
+    align-items: center;
+    gap: 24px;
+    margin-bottom: 24px;
+  }
+  .profile-avatar {
+    width: 80px; height: 80px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, var(--red), var(--orange));
+    display: flex; align-items: center; justify-content: center;
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 32px;
+    border: 3px solid var(--red);
+    overflow: hidden;
+    flex-shrink: 0;
+  }
+  .profile-avatar img { width: 100%; height: 100%; object-fit: cover; }
+  .profile-name { font-family: 'Bebas Neue', sans-serif; font-size: 28px; letter-spacing: 1px; }
+  .profile-meta { font-size: 13px; color: var(--muted); display: flex; gap: 16px; flex-wrap: wrap; margin-top: 6px; }
+  .profile-meta span { display: flex; align-items: center; gap: 4px; }
+
+  /* ── ANNOUNCEMENTS ── */
+  .announcement-card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 18px 20px;
+    margin-bottom: 12px;
+    border-left: 4px solid var(--red);
+  }
+  .ann-title { font-weight: 600; font-size: 15px; margin-bottom: 6px; }
+  .ann-body  { font-size: 13px; color: var(--silver); line-height: 1.6; }
+  .ann-date  { font-size: 11px; color: var(--muted); margin-top: 8px; }
+  .ann-tag   { display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; background: var(--red)22; color: var(--red); border: 1px solid var(--red)44; margin-right: 6px; }
+
+  /* ── SEARCH ── */
+  .search-box {
+    background: var(--navy);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 9px 14px;
+    color: var(--white);
+    font-size: 13px;
+    outline: none;
+    width: 220px;
+    font-family: 'Inter', sans-serif;
+  }
+  .search-box:focus { border-color: var(--red); }
+
+  /* ── EMPTY STATE ── */
+  .empty-state { text-align: center; padding: 60px 20px; }
+  .empty-icon  { font-size: 48px; margin-bottom: 16px; opacity: 0.4; }
+  .empty-text  { font-size: 15px; color: var(--muted); }
+
+  /* ── PROGRESS ── */
+  .progress-bar { background: var(--navy); border-radius: 4px; height: 6px; overflow: hidden; }
+  .progress-fill { height: 100%; background: linear-gradient(90deg, var(--red), var(--orange)); border-radius: 4px; transition: width 0.5s; }
+
+  /* ── MONEY ── */
+  .money { font-family: 'Roboto Mono', monospace; font-weight: 600; }
+
+  /* ── LOADER ── */
+  .loader { display: flex; align-items: center; justify-content: center; padding: 60px; }
+  .spinner { width: 36px; height: 36px; border: 3px solid var(--border); border-top-color: var(--red); border-radius: 50%; animation: spin 0.8s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* ── DEMO BANNER ── */
+  .demo-banner {
+    background: linear-gradient(135deg, #1a2f6e, #2d1b4e);
+    border: 1px solid #3B82F644;
+    border-radius: 10px;
+    padding: 14px 20px;
+    margin-bottom: 20px;
+    font-size: 13px;
+    color: #93C5FD;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  select.form-control option { background: var(--navy2); }
+
+  @media (max-width: 768px) {
+    .sidebar { transform: translateX(-100%); }
+    .sidebar.open { transform: translateX(0); }
+    .main-content { margin-left: 0; }
+    .stats-grid { grid-template-columns: 1fr 1fr; }
+    .chart-grid  { grid-template-columns: 1fr; }
+    .form-row    { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+<div id="root"></div>
+
+<script type="text/babel">
+const { useState, useEffect, useRef, useCallback } = React;
+
+// ── FIREBASE HELPERS ──────────────────────────────────────────────────────────
+const FB = () => window.__firebase;
+
+const formatKES  = n => `KES ${Number(n || 0).toLocaleString('en-KE', { minimumFractionDigits: 0 })}`;
+const initials   = name => name ? name.split(' ').map(w => w[0]).join('').toUpperCase().slice(0,2) : '?';
+const monthNames = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+const fmtDate    = ts => { try { const d = ts?.toDate ? ts.toDate() : new Date(ts); return d.toLocaleDateString('en-KE'); } catch{ return '—'; } };
+const nowStr     = () => new Date().toISOString().slice(0,10);
+
+// ── DEMO DATA (shown when Firebase isn't configured) ─────────────────────────
+const DEMO_MEMBERS = [
+  { id:'1', fullname:'James Mwangi', phone:'0712345678', jersey_number:'7', position:'Midfielder', date_joined:'2023-03-15', status:'Active', photo:'' },
+  { id:'2', fullname:'Peter Kamau', phone:'0723456789', jersey_number:'1', position:'Goalkeeper', date_joined:'2023-03-15', status:'Active', photo:'' },
+  { id:'3', fullname:'David Njoroge', phone:'0734567890', jersey_number:'5', position:'Defender', date_joined:'2023-04-01', status:'Active', photo:'' },
+  { id:'4', fullname:'Samuel Kipchoge', phone:'0745678901', jersey_number:'10', position:'Forward', date_joined:'2023-04-01', status:'Inactive', photo:'' },
+  { id:'5', fullname:'Michael Odhiambo', phone:'0756789012', jersey_number:'3', position:'Defender', date_joined:'2023-05-10', status:'Active', photo:'' },
+];
+const DEMO_CONTRIBUTIONS = [
+  { id:'c1', member_id:'1', amount:500, payment_date:'2024-01-05', month:'January', year:2024, payment_method:'M-Pesa', notes:'' },
+  { id:'c2', member_id:'2', amount:500, payment_date:'2024-01-06', month:'January', year:2024, payment_method:'Cash', notes:'' },
+  { id:'c3', member_id:'3', amount:500, payment_date:'2024-02-03', month:'February', year:2024, payment_method:'M-Pesa', notes:'' },
+  { id:'c4', member_id:'1', amount:500, payment_date:'2024-02-04', month:'February', year:2024, payment_method:'M-Pesa', notes:'' },
+  { id:'c5', member_id:'5', amount:500, payment_date:'2024-03-01', month:'March', year:2024, payment_method:'Cash', notes:'' },
+  { id:'c6', member_id:'2', amount:500, payment_date:'2024-03-02', month:'March', year:2024, payment_method:'M-Pesa', notes:'' },
+];
+const DEMO_EXPENSES = [
+  { id:'e1', expense_name:'Referee Fees', amount:2000, date:'2024-01-15', description:'League match vs City Stars' },
+  { id:'e2', expense_name:'Ground Booking', amount:3000, date:'2024-02-10', description:'Training pitch - February' },
+  { id:'e3', expense_name:'Medical', amount:1500, date:'2024-03-05', description:'First aid kit replenishment' },
+];
+const DEMO_ANNOUNCEMENTS = [
+  { id:'a1', title:'Match Day vs Rift Valley Rangers', message:'We have a friendly match this Saturday at Afraha Stadium. All players must report by 2:00 PM. Bring your jerseys.', type:'Match Day', created_at: new Date() },
+  { id:'a2', title:'Monthly Contributions Due', message:'Kindly ensure your monthly contribution of KES 500 is paid by end of month. Contact the admin for any issues.', type:'Welfare', created_at: new Date() },
+];
+const POSITIONS = ['Goalkeeper','Defender','Midfielder','Forward','Winger','Striker'];
+const MONTHS    = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+const PAYMENT_METHODS = ['M-Pesa','Cash','Bank Transfer','Airtel Money'];
+const EXPENSE_CATS = ['Referee','Transport','Jerseys','Balls','Medical','Ground Booking','Food & Water','Other'];
+const ANN_TYPES = ['Match Day','Training','Meeting','Welfare Update','General'];
+
+// ── CHART COMPONENT ──────────────────────────────────────────────────────────
+function BarChart({ data, labels, label }) {
+  const ref = useRef(null);
+  const chart = useRef(null);
+  useEffect(() => {
+    if (!ref.current) return;
+    if (chart.current) chart.current.destroy();
+    chart.current = new Chart(ref.current, {
+      type: 'bar',
+      data: {
+        labels,
+        datasets: [{ label, data, backgroundColor: labels.map((_,i) => i % 2 === 0 ? '#D63B2F' : '#E8511E'), borderRadius: 6, borderSkipped: false }]
+      },
+      options: {
+        responsive: true,
+        plugins: { legend: { display: false }, tooltip: { callbacks: { label: ctx => `KES ${ctx.parsed.y.toLocaleString()}` } } },
+        scales: {
+          x: { ticks: { color: '#7A8BAA', font: { size: 11 } }, grid: { display: false } },
+          y: { ticks: { color: '#7A8BAA', font: { size: 11 }, callback: v => `${v/1000}k` }, grid: { color: '#1E2F5C' } }
+        }
+      }
+    });
+    return () => chart.current?.destroy();
+  }, [data, labels]);
+  return <canvas ref={ref} height={180} />;
+}
+
+function DonutChart({ paid, unpaid }) {
+  const ref = useRef(null);
+  const chart = useRef(null);
+  useEffect(() => {
+    if (!ref.current) return;
+    if (chart.current) chart.current.destroy();
+    chart.current = new Chart(ref.current, {
+      type: 'doughnut',
+      data: {
+        labels: ['Paid','Unpaid'],
+        datasets: [{ data: [paid, unpaid], backgroundColor: ['#22C55E','#EF4444'], borderWidth: 0, hoverOffset: 4 }]
+      },
+      options: {
+        cutout: '70%',
+        plugins: { legend: { labels: { color: '#C8D0E0', font: { size: 11 } } } }
+      }
+    });
+    return () => chart.current?.destroy();
+  }, [paid, unpaid]);
+  return <canvas ref={ref} height={180} />;
+}
+
+// ── MAIN APP ─────────────────────────────────────────────────────────────────
+function App() {
+  const [authed, setAuthed]   = useState(null);
+  const [isDemo, setIsDemo]   = useState(false);
+  const [page,   setPage]     = useState('dashboard');
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+
+  // Live data
+  const [members,       setMembers]       = useState([]);
+  const [contributions, setContributions] = useState([]);
+  const [expenses,      setExpenses]      = useState([]);
+  const [announcements, setAnnouncements] = useState([]);
+  const [loading,       setLoading]       = useState(true);
+
+  // Check Firebase config
+  useEffect(() => {
+    const fb = FB();
+    if (!fb || fb.auth.app.options.apiKey === 'YOUR_API_KEY') {
+      setIsDemo(true);
+      setAuthed(false);
+      setLoading(false);
+      return;
+    }
+    fb.onAuthStateChanged(fb.auth, user => {
+      setAuthed(!!user);
+      setLoading(false);
+    });
+  }, []);
+
+  // Load data
+  useEffect(() => {
+    if (isDemo) {
+      setMembers(DEMO_MEMBERS);
+      setContributions(DEMO_CONTRIBUTIONS);
+      setExpenses(DEMO_EXPENSES);
+      setAnnouncements(DEMO_ANNOUNCEMENTS);
+      setLoading(false);
+      return;
+    }
+    if (!authed) return;
+    const fb = FB();
+    const unsubs = [];
+    const load = (col, setter) => {
+      const q = fb.query(fb.collection(fb.db, col), fb.orderBy('created_at','desc'));
+      unsubs.push(fb.onSnapshot(fb.collection(fb.db, col), snap => {
+        setter(snap.docs.map(d => ({ id: d.id, ...d.data() })));
+      }));
+    };
+    fb.onSnapshot(fb.collection(fb.db, 'members'), snap => setMembers(snap.docs.map(d => ({ id: d.id, ...d.data() }))));
+    fb.onSnapshot(fb.collection(fb.db, 'contributions'), snap => setContributions(snap.docs.map(d => ({ id: d.id, ...d.data() }))));
+    fb.onSnapshot(fb.collection(fb.db, 'expenses'), snap => setExpenses(snap.docs.map(d => ({ id: d.id, ...d.data() }))));
+    fb.onSnapshot(fb.collection(fb.db, 'announcements'), snap => setAnnouncements(snap.docs.map(d => ({ id: d.id, ...d.data() }))));
+    return () => unsubs.forEach(u => u());
+  }, [authed, isDemo]);
+
+  const handleLogout = async () => {
+    if (isDemo) { setAuthed(false); return; }
+    await FB().signOut(FB().auth);
+  };
+
+  if (loading) return <div className="loader"><div className="spinner"/></div>;
+  if (!authed && !isDemo) return <Login setAuthed={setAuthed} setIsDemo={setIsDemo} />;
+  if (!authed && isDemo) return <Login setAuthed={setAuthed} setIsDemo={setIsDemo} />;
+
+  const nav = [
+    { id:'dashboard',     icon:'⚽', label:'Dashboard'     },
+    { id:'members',       icon:'👥', label:'Members'        },
+    { id:'contributions', icon:'💰', label:'Contributions'  },
+    { id:'expenses',      icon:'📋', label:'Expenses'       },
+    { id:'reports',       icon:'📊', label:'Reports'        },
+    { id:'announcements', icon:'📢', label:'Announcements'  },
+  ];
+
+  const sharedProps = { members, contributions, expenses, announcements, isDemo, setMembers, setContributions, setExpenses, setAnnouncements };
+
+  return (
+    <div className="app-wrap">
+      {/* Sidebar */}
+      <aside className={`sidebar ${sidebarOpen ? 'open' : ''}`}>
+        <div className="sidebar-logo">
+          <div className="sidebar-club">NAKURU<br/>VETERANS FC</div>
+          <div className="sidebar-sub">EST. 2023 · BELLATOR FORTIS</div>
+          <div className="badge-strip"/>
+        </div>
+        <div className="nav-section">Navigation</div>
+        {nav.map(n => (
+          <div key={n.id} className={`nav-item ${page === n.id ? 'active' : ''}`} onClick={() => { setPage(n.id); setSidebarOpen(false); }}>
+            <span className="nav-icon">{n.icon}</span>
+            <span>{n.label}</span>
+          </div>
+        ))}
+        <div className="sidebar-footer">
+          <div className="admin-chip">
+            <div className="admin-avatar">A</div>
+            <div>
+              <div className="admin-name">Administrator</div>
+              <div className="admin-role">System Admin</div>
+            </div>
+          </div>
+          <button className="btn btn-ghost btn-sm" style={{width:'100%',marginTop:12}} onClick={handleLogout}>Sign Out</button>
+        </div>
+      </aside>
+
+      {/* Main */}
+      <div className="main-content">
+        <div className="topbar">
+          <div style={{display:'flex',alignItems:'center',gap:14}}>
+            <button className="btn btn-ghost btn-sm" style={{display:'none'}} onClick={()=>setSidebarOpen(!sidebarOpen)}>☰</button>
+            <span className="topbar-title">{nav.find(n=>n.id===page)?.label || 'Dashboard'}</span>
+          </div>
+          <div className="topbar-actions">
+            {isDemo && <span style={{fontSize:12,color:'#93C5FD',background:'#1E3A8A33',padding:'4px 10px',borderRadius:6}}>🔵 Demo Mode</span>}
+          </div>
+        </div>
+
+        <div className="page-body">
+          {isDemo && (
+            <div className="demo-banner">
+              ℹ️ <span><strong>Demo Mode Active</strong> – Replace the Firebase config at the top of this file with your project credentials to enable live data, authentication, and real-time sync.</span>
+            </div>
+          )}
+          {page === 'dashboard'     && <Dashboard     {...sharedProps} />}
+          {page === 'members'       && <Members        {...sharedProps} />}
+          {page === 'contributions' && <Contributions  {...sharedProps} />}
+          {page === 'expenses'      && <Expenses       {...sharedProps} />}
+          {page === 'reports'       && <Reports        {...sharedProps} />}
+          {page === 'announcements' && <Announcements  {...sharedProps} />}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ── LOGIN ─────────────────────────────────────────────────────────────────────
+function Login({ setAuthed, setIsDemo }) {
+  const [email, setEmail]   = useState('');
+  const [pass,  setPass]    = useState('');
+  const [err,   setErr]     = useState('');
+  const [busy,  setBusy]    = useState(false);
+
+  const login = async () => {
+    if (!email || !pass) return setErr('Enter email and password');
+    const fb = FB();
+    if (!fb || fb.auth.app.options.apiKey === 'YOUR_API_KEY') {
+      // Demo shortcut
+      if (email === 'admin@nvfc.com' && pass === 'admin123') {
+        setIsDemo(true); setAuthed(true);
+      } else setErr('Demo credentials: admin@nvfc.com / admin123');
+      return;
+    }
+    setBusy(true); setErr('');
+    try {
+      await fb.signInWithEmailAndPassword(fb.auth, email, pass);
+      setAuthed(true);
+    } catch(e) {
+      setErr('Invalid credentials. Please try again.');
+    } finally { setBusy(false); }
+  };
+
+  return (
+    <div className="login-wrap">
+      <div className="login-card">
+        <div className="login-badge">⚽</div>
+        <div className="login-title">NAKURU VETERANS FC</div>
+        <div className="login-sub">Management System · Admin Portal</div>
+        <div className="form-group">
+          <label>Email Address</label>
+          <input className="form-control" type="email" placeholder="admin@nvfc.com" value={email} onChange={e=>setEmail(e.target.value)} onKeyDown={e=>e.key==='Enter'&&login()} />
+        </div>
+        <div className="form-group">
+          <label>Password</label>
+          <input className="form-control" type="password" placeholder="••••••••" value={pass} onChange={e=>setPass(e.target.value)} onKeyDown={e=>e.key==='Enter'&&login()} />
+        </div>
+        <button className="btn btn-primary" onClick={login} disabled={busy}>{busy ? 'Signing in…' : '🔐 Sign In'}</button>
+        {err && <div className="error-msg">{err}</div>}
+        <div style={{textAlign:'center',fontSize:12,color:'var(--muted)',marginTop:20}}>
+          Demo: admin@nvfc.com / admin123
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ── DASHBOARD ─────────────────────────────────────────────────────────────────
+function Dashboard({ members, contributions, expenses, announcements }) {
+  const totalContrib  = contributions.reduce((s,c) => s + Number(c.amount||0), 0);
+  const totalExpenses = expenses.reduce((s,e) => s + Number(e.amount||0), 0);
+  const balance       = totalContrib - totalExpenses;
+  const active        = members.filter(m => m.status === 'Active').length;
+
+  // Monthly contributions chart
+  const monthly = {};
+  contributions.forEach(c => {
+    const k = c.month ? c.month.slice(0,3) : '?';
+    monthly[k] = (monthly[k] || 0) + Number(c.amount||0);
+  });
+  const chartLabels = monthNames;
+  const chartData   = monthNames.map(m => monthly[m] || 0);
+
+  // Recent transactions
+  const recent = [...contributions].sort((a,b) => {
+    const da = a.payment_date ? new Date(a.payment_date) : new Date(0);
+    const db2 = b.payment_date ? new Date(b.payment_date) : new Date(0);
+    return db2 - da;
+  }).slice(0,5);
+
+  const getMemberName = id => members.find(m => m.id === id)?.fullname || 'Unknown';
+
+  return (
+    <>
+      <div className="stats-grid">
+        <div className="stat-card red">
+          <div className="stat-label">Total Members</div>
+          <div className="stat-value">{members.length}</div>
+          <div className="stat-sub">{active} active</div>
+        </div>
+        <div className="stat-card green">
+          <div className="stat-label">Club Balance</div>
+          <div className="stat-value money" style={{fontSize:26}}>{formatKES(balance)}</div>
+          <div className="stat-sub">Net position</div>
+        </div>
+        <div className="stat-card gold">
+          <div className="stat-label">Total Contributions</div>
+          <div className="stat-value money" style={{fontSize:22}}>{formatKES(totalContrib)}</div>
+          <div className="stat-sub">{contributions.length} records</div>
+        </div>
+        <div className="stat-card blue">
+          <div className="stat-label">Total Expenses</div>
+          <div className="stat-value money" style={{fontSize:22}}>{formatKES(totalExpenses)}</div>
+          <div className="stat-sub">{expenses.length} records</div>
+        </div>
+      </div>
+
+      <div className="chart-grid">
+        <div className="chart-card">
+          <div className="chart-title">📈 Monthly Contributions</div>
+          <BarChart data={chartData} labels={chartLabels} label="Contributions" />
+        </div>
+        <div className="chart-card">
+          <div className="chart-title">👥 Member Status</div>
+          <DonutChart paid={active} unpaid={members.length - active} />
+          <div style={{textAlign:'center',fontSize:12,color:'var(--muted)',marginTop:8}}>{active} Active · {members.length-active} Inactive</div>
+        </div>
+      </div>
+
+      <div className="chart-grid" style={{gridTemplateColumns:'1fr 1fr'}}>
+        <div className="table-card">
+          <div className="table-header">
+            <span className="table-title">💰 Recent Contributions</span>
+          </div>
+          <table>
+            <thead><tr><th>Member</th><th>Amount</th><th>Month</th></tr></thead>
+            <tbody>
+              {recent.length === 0 ? (
+                <tr><td colSpan={3} style={{textAlign:'center',color:'var(--muted)',padding:30}}>No contributions yet</td></tr>
+              ) : recent.map(c => (
+                <tr key={c.id}>
+                  <td><div className="member-name">{getMemberName(c.member_id)}</div></td>
+                  <td><span className="money">{formatKES(c.amount)}</span></td>
+                  <td>{c.month}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+        <div className="table-card">
+          <div className="table-header">
+            <span className="table-title">📢 Announcements</span>
+          </div>
+          {announcements.length === 0 ? (
+            <div className="empty-state"><div className="empty-icon">📢</div><div className="empty-text">No announcements</div></div>
+          ) : announcements.slice(0,3).map(a => (
+            <div key={a.id} style={{padding:'14px 20px',borderBottom:'1px solid var(--border)'}}>
+              <div style={{fontWeight:600,fontSize:13}}>{a.title}</div>
+              <div style={{fontSize:12,color:'var(--muted)',marginTop:4}}>{a.type}</div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </>
+  );
+}
+
+// ── MEMBERS ───────────────────────────────────────────────────────────────────
+function Members({ members, contributions, isDemo, setMembers }) {
+  const [search,   setSearch]   = useState('');
+  const [modal,    setModal]    = useState(null);  // null | 'add' | 'edit' | 'profile'
+  const [selected, setSelected] = useState(null);
+  const [form,     setForm]     = useState({});
+  const [busy,     setBusy]     = useState(false);
+
+  const filtered = members.filter(m =>
+    m.fullname?.toLowerCase().includes(search.toLowerCase()) ||
+    m.position?.toLowerCase().includes(search.toLowerCase()) ||
+    String(m.jersey_number).includes(search)
+  );
+
+  const openAdd  = () => { setForm({ status:'Active', date_joined: nowStr() }); setModal('add'); };
+  const openEdit = m  => { setForm({ ...m }); setSelected(m); setModal('edit'); };
+  const openProf = m  => { setSelected(m); setModal('profile'); };
+  const closeModal = () => { setModal(null); setSelected(null); setForm({}); };
+
+  const save = async () => {
+    if (!form.fullname) return alert('Full name is required');
+    setBusy(true);
+    if (isDemo) {
+      if (modal === 'add') {
+        setMembers(prev => [...prev, { ...form, id: Date.now().toString() }]);
+      } else {
+        setMembers(prev => prev.map(m => m.id === selected.id ? { ...form } : m));
+      }
+      setBusy(false); closeModal(); return;
+    }
+    const fb = FB();
+    const data = { fullname: form.fullname, phone: form.phone||'', jersey_number: form.jersey_number||'', position: form.position||'', date_joined: form.date_joined||'', status: form.status||'Active', photo: form.photo||'' };
+    if (modal === 'add') await fb.addDoc(fb.collection(fb.db,'members'), data);
+    else await fb.updateDoc(fb.doc(fb.db,'members',selected.id), data);
+    setBusy(false); closeModal();
+  };
+
+  const deleteMember = async m => {
+    if (!confirm(`Delete ${m.fullname}? This cannot be undone.`)) return;
+    if (isDemo) { setMembers(prev => prev.filter(x => x.id !== m.id)); return; }
+    const fb = FB();
+    await fb.deleteDoc(fb.doc(fb.db,'members',m.id));
+  };
+
+  const getMemberTotal = id => contributions.filter(c => c.member_id === id).reduce((s,c) => s+Number(c.amount||0),0);
+
+  return (
+    <>
+      <div className="table-card">
+        <div className="table-header">
+          <span className="table-title">👥 All Members ({filtered.length})</span>
+          <div style={{display:'flex',gap:10}}>
+            <input className="search-box" placeholder="🔍 Search members…" value={search} onChange={e=>setSearch(e.target.value)} />
+            <button className="btn btn-primary btn-sm" onClick={openAdd}>+ Add Member</button>
+          </div>
+        </div>
+        {filtered.length === 0 ? (
+          <div className="empty-state"><div className="empty-icon">👥</div><div className="empty-text">No members found</div></div>
+        ) : (
+          <table>
+            <thead><tr><th>#</th><th>Member</th><th>Phone</th><th>Position</th><th>Date Joined</th><th>Contributed</th><th>Status</th><th>Actions</th></tr></thead>
+            <tbody>
+              {filtered.map(m => (
+                <tr key={m.id}>
+                  <td><span className="jersey">#{m.jersey_number || '—'}</span></td>
+                  <td>
+                    <div className="member-row">
+                      <div className="avatar">{m.photo ? <img src={m.photo} alt={m.fullname}/> : initials(m.fullname)}</div>
+                      <div><div className="member-name">{m.fullname}</div></div>
+                    </div>
+                  </td>
+                  <td style={{fontFamily:'monospace',fontSize:12}}>{m.phone}</td>
+                  <td>{m.position}</td>
+                  <td style={{fontSize:12,color:'var(--muted)'}}>{m.date_joined}</td>
+                  <td><span className="money">{formatKES(getMemberTotal(m.id))}</span></td>
+                  <td><span className={`badge badge-${m.status === 'Active' ? 'active' : 'inactive'}`}>{m.status}</span></td>
+                  <td>
+                    <div style={{display:'flex',gap:6'}}>
+                      <button className="btn btn-ghost btn-sm" onClick={()=>openProf(m)}>👁 View</button>
+                      <button className="btn btn-outline btn-sm" onClick={()=>openEdit(m)}>✏️</button>
+                      <button className="btn btn-danger btn-sm" onClick={()=>deleteMember(m)}>🗑</button>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
+      </div>
+
+      {/* Add/Edit Modal */}
+      {(modal === 'add' || modal === 'edit') && (
+        <div className="modal-overlay" onClick={e=>e.target===e.currentTarget&&closeModal()}>
+          <div className="modal">
+            <div className="modal-header">
+              <span className="modal-title">{modal === 'add' ? 'ADD NEW MEMBER' : 'EDIT MEMBER'}</span>
+              <button className="close-btn" onClick={closeModal}>✕</button>
+            </div>
+            <div className="modal-body">
+              <div className="form-row">
+                <div className="form-group"><label>Full Name *</label><input className="form-control" value={form.fullname||''} onChange={e=>setForm(f=>({...f,fullname:e.target.value}))} /></div>
+                <div className="form-group"><label>Phone Number</label><input className="form-control" value={form.phone||''} onChange={e=>setForm(f=>({...f,phone:e.target.value}))} /></div>
+              </div>
+              <div className="form-row">
+                <div className="form-group"><label>Jersey Number</label><input className="form-control" type="number" value={form.jersey_number||''} onChange={e=>setForm(f=>({...f,jersey_number:e.target.value}))} /></div>
+                <div className="form-group"><label>Position</label>
+                  <select className="form-control" value={form.position||''} onChange={e=>setForm(f=>({...f,position:e.target.value}))}>
+                    <option value="">Select…</option>
+                    {POSITIONS.map(p=><option key={p}>{p}</option>)}
+                  </select>
+                </div>
+              </div>
+              <div className="form-row">
+                <div className="form-group"><label>Date Joined</label><input className="form-control" type="date" value={form.date_joined||''} onChange={e=>setForm(f=>({...f,date_joined:e.target.value}))} /></div>
+                <div className="form-group"><label>Status</label>
+                  <select className="form-control" value={form.status||'Active'} onChange={e=>setForm(f=>({...f,status:e.target.value}))}>
+                    <option>Active</option><option>Inactive</option>
+                  </select>
+                </div>
+              </div>
+              <div className="form-group"><label>Photo URL (optional)</label><input className="form-control" placeholder="https://…" value={form.photo||''} onChange={e=>setForm(f=>({...f,photo:e.target.value}))} /></div>
+            </div>
+            <div className="modal-footer">
+              <button className="btn btn-ghost" onClick={closeModal}>Cancel</button>
+              <button className="btn btn-primary" onClick={save} disabled={busy}>{busy ? 'Saving…' : modal==='add' ? '✅ Add Member' : '💾 Save Changes'}</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Profile Modal */}
+      {modal === 'profile' && selected && (
+        <div className="modal-overlay" onClick={e=>e.target===e.currentTarget&&closeModal()}>
+          <div className="modal" style={{maxWidth:600}}>
+            <div className="modal-header">
+              <span className="modal-title">MEMBER PROFILE</span>
+              <button className="close-btn" onClick={closeModal}>✕</button>
+            </div>
+            <div className="modal-body">
+              <MemberProfile member={selected} contributions={contributions} />
+            </div>
+          </div>
+        </div>
+      )}
+    </>
+  );
+}
+
+function MemberProfile({ member, contributions }) {
+  const memberContribs = contributions.filter(c => c.member_id === member.id);
+  const total = memberContribs.reduce((s,c)=>s+Number(c.amount||0),0);
+  const allTotal = contributions.reduce((s,c)=>s+Number(c.amount||0),0);
+  const pct = allTotal > 0 ? Math.round((total/allTotal)*100) : 0;
+
+  return (
+    <>
+      <div className="profile-header">
+        <div className="profile-avatar">{member.photo ? <img src={member.photo} alt={member.fullname}/> : initials(member.fullname)}</div>
+        <div>
+          <div className="profile-name">{member.fullname}</div>
+          <div className="profile-meta">
+            <span>⚽ {member.position}</span>
+            <span>🏷 #{member.jersey_number}</span>
+            <span>📅 Joined {member.date_joined}</span>
+          </div>
+          <div style={{marginTop:10}}>
+            <span className={`badge badge-${member.status==='Active'?'active':'inactive'}`}>{member.status}</span>
+          </div>
+        </div>
+      </div>
+
+      <div className="stats-grid" style={{marginBottom:20}}>
+        <div className="stat-card green"><div className="stat-label">Total Contributed</div><div className="stat-value money" style={{fontSize:22}}>{formatKES(total)}</div></div>
+        <div className="stat-card gold"><div className="stat-label">Contributions</div><div className="stat-value">{memberContribs.length}</div></div>
+        <div className="stat-card blue"><div className="stat-label">Club Share</div><div className="stat-value">{pct}%</div></div>
+      </div>
+
+      <div style={{marginBottom:16}}>
+        <div style={{display:'flex',justifyContent:'space-between',marginBottom:8,fontSize:13}}><span>Contribution share</span><span>{pct}%</span></div>
+        <div className="progress-bar"><div className="progress-fill" style={{width:`${pct}%`}}/></div>
+      </div>
+
+      <div className="table-card">
+        <div className="table-header"><span className="table-title">Contribution History</span></div>
+        <table>
+          <thead><tr><th>Date</th><th>Month</th><th>Amount</th><th>Method</th></tr></thead>
+          <tbody>
+            {memberContribs.length === 0 ? (
+              <tr><td colSpan={4} style={{textAlign:'center',color:'var(--muted)',padding:20}}>No contributions yet</td></tr>
+            ) : memberContribs.map(c => (
+              <tr key={c.id}>
+                <td style={{fontSize:12}}>{c.payment_date}</td>
+                <td>{c.month} {c.year}</td>
+                <td><span className="money">{formatKES(c.amount)}</span></td>
+                <td>{c.payment_method}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </>
+  );
+}
+
+// ── CONTRIBUTIONS ─────────────────────────────────────────────────────────────
+function Contributions({ members, contributions, isDemo, setContributions }) {
+  const [modal, setModal] = useState(false);
+  const [form,  setForm]  = useState({});
+  const [busy,  setBusy]  = useState(false);
+  const [search, setSearch] = useState('');
+
+  const filtered = contributions.filter(c => {
+    const m = members.find(x => x.id === c.member_id);
+    return !search || m?.fullname?.toLowerCase().includes(search.toLowerCase()) || c.month?.toLowerCase().includes(search.toLowerCase());
+  }).sort((a,b) => new Date(b.payment_date||0) - new Date(a.payment_date||0));
+
+  const openAdd = () => { setForm({ payment_date: nowStr(), year: new Date().getFullYear(), month: MONTHS[new Date().getMonth()] }); setModal(true); };
+
+  const save = async () => {
+    if (!form.member_id || !form.amount) return alert('Member and amount are required');
+    setBusy(true);
+    const data = { member_id:form.member_id, amount:Number(form.amount), payment_date:form.payment_date, month:form.month, year:Number(form.year), payment_method:form.payment_method||'Cash', notes:form.notes||'' };
+    if (isDemo) {
+      setContributions(prev => [{ ...data, id: Date.now().toString() }, ...prev]);
+      setBusy(false); setModal(false); setForm({}); return;
+    }
+    await FB().addDoc(FB().collection(FB().db,'contributions'), data);
+    setBusy(false); setModal(false); setForm({});
+  };
+
+  const del = async c => {
+    if (!confirm('Delete this contribution record?')) return;
+    if (isDemo) { setContributions(prev=>prev.filter(x=>x.id!==c.id)); return; }
+    await FB().deleteDoc(FB().doc(FB().db,'contributions',c.id));
+  };
+
+  const getMemberName = id => members.find(m=>m.id===id)?.fullname || 'Unknown';
+  const total = filtered.reduce((s,c)=>s+Number(c.amount||0),0);
+
+  return (
+    <>
+      <div className="stats-grid" style={{marginBottom:20}}>
+        <div className="stat-card green"><div className="stat-label">Total Collected</div><div className="stat-value money" style={{fontSize:22}}>{formatKES(contributions.reduce((s,c)=>s+Number(c.amount||0),0))}</div></div>
+        <div className="stat-card blue"><div className="stat-label">Transactions</div><div className="stat-value">{contributions.length}</div></div>
+      </div>
+
+      <div className="table-card">
+        <div className="table-header">
+          <span className="table-title">💰 Contributions ({filtered.length})</span>
+          <div style={{display:'flex',gap:10}}>
+            <input className="search-box" placeholder="🔍 Search…" value={search} onChange={e=>setSearch(e.target.value)} />
+            <button className="btn btn-primary btn-sm" onClick={openAdd}>+ Record</button>
+          </div>
+        </div>
+        <table>
+          <thead><tr><th>Member</th><th>Amount</th><th>Month</th><th>Date</th><th>Method</th><th>Notes</th><th></th></tr></thead>
+          <tbody>
+            {filtered.length === 0 ? (
+              <tr><td colSpan={7} style={{textAlign:'center',color:'var(--muted)',padding:30}}>No contributions found</td></tr>
+            ) : filtered.map(c => (
+              <tr key={c.id}>
+                <td><div className="member-name">{getMemberName(c.member_id)}</div></td>
+                <td><span className="money" style={{color:'var(--green)'}}>{formatKES(c.amount)}</span></td>
+                <td>{c.month} {c.year}</td>
+                <td style={{fontSize:12,color:'var(--muted)'}}>{c.payment_date}</td>
+                <td>{c.payment_method}</td>
+                <td style={{fontSize:12,color:'var(--muted)'}}>{c.notes}</td>
+                <td><button className="btn btn-danger btn-sm" onClick={()=>del(c)}>🗑</button></td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+        <div style={{padding:'12px 20px',borderTop:'1px solid var(--border)',display:'flex',justifyContent:'flex-end',fontSize:13}}>
+          <span style={{color:'var(--muted)',marginRight:16}}>Showing total:</span>
+          <span className="money" style={{color:'var(--green)',fontWeight:700}}>{formatKES(total)}</span>
+        </div>
+      </div>
+
+      {modal && (
+        <div className="modal-overlay" onClick={e=>e.target===e.currentTarget&&setModal(false)}>
+          <div className="modal">
+            <div className="modal-header"><span className="modal-title">RECORD CONTRIBUTION</span><button className="close-btn" onClick={()=>setModal(false)}>✕</button></div>
+            <div className="modal-body">
+              <div className="form-group"><label>Member *</label>
+                <select className="form-control" value={form.member_id||''} onChange={e=>setForm(f=>({...f,member_id:e.target.value}))}>
+                  <option value="">Select member…</option>
+                  {members.map(m=><option key={m.id} value={m.id}>{m.fullname} (#{m.jersey_number})</option>)}
+                </select>
+              </div>
+              <div className="form-row">
+                <div className="form-group"><label>Amount (KES) *</label><input className="form-control" type="number" placeholder="500" value={form.amount||''} onChange={e=>setForm(f=>({...f,amount:e.target.value}))} /></div>
+                <div className="form-group"><label>Payment Method</label>
+                  <select className="form-control" value={form.payment_method||'Cash'} onChange={e=>setForm(f=>({...f,payment_method:e.target.value}))}>
+                    {PAYMENT_METHODS.map(p=><option key={p}>{p}</option>)}
+                  </select>
+                </div>
+              </div>
+              <div className="form-row">
+                <div className="form-group"><label>Month Paid For</label>
+                  <select className="form-control" value={form.month||''} onChange={e=>setForm(f=>({...f,month:e.target.value}))}>
+                    {MONTHS.map(m=><option key={m}>{m}</option>)}
+                  </select>
+                </div>
+                <div className="form-group"><label>Year</label><input className="form-control" type="number" value={form.year||2024} onChange={e=>setForm(f=>({...f,year:e.target.value}))} /></div>
+              </div>
+              <div className="form-group"><label>Payment Date</label><input className="form-control" type="date" value={form.payment_date||''} onChange={e=>setForm(f=>({...f,payment_date:e.target.value}))} /></div>
+              <div className="form-group"><label>Notes</label><input className="form-control" placeholder="Optional notes…" value={form.notes||''} onChange={e=>setForm(f=>({...f,notes:e.target.value}))} /></div>
+            </div>
+            <div className="modal-footer">
+              <button className="btn btn-ghost" onClick={()=>setModal(false)}>Cancel</button>
+              <button className="btn btn-primary" onClick={save} disabled={busy}>{busy?'Saving…':'💰 Record Contribution'}</button>
+            </div>
+          </div>
+        </div>
+      )}
+    </>
+  );
+}
+
+// ── EXPENSES ──────────────────────────────────────────────────────────────────
+function Expenses({ expenses, isDemo, setExpenses }) {
+  const [modal, setModal] = useState(false);
+  const [form,  setForm]  = useState({});
+  const [busy,  setBusy]  = useState(false);
+
+  const save = async () => {
+    if (!form.expense_name || !form.amount) return alert('Name and amount are required');
+    setBusy(true);
+    const data = { expense_name:form.expense_name, amount:Number(form.amount), date:form.date||nowStr(), description:form.description||'' };
+    if (isDemo) {
+      setExpenses(prev=>[{...data,id:Date.now().toString()},...prev]);
+      setBusy(false); setModal(false); setForm({}); return;
+    }
+    await FB().addDoc(FB().collection(FB().db,'expenses'), data);
+    setBusy(false); setModal(false); setForm({});
+  };
+
+  const del = async e => {
+    if (!confirm('Delete this expense?')) return;
+    if (isDemo) { setExpenses(prev=>prev.filter(x=>x.id!==e.id)); return; }
+    await FB().deleteDoc(FB().doc(FB().db,'expenses',e.id));
+  };
+
+  const total = expenses.reduce((s,e)=>s+Number(e.amount||0),0);
+
+  return (
+    <>
+      <div className="stats-grid" style={{marginBottom:20}}>
+        <div className="stat-card red"><div className="stat-label">Total Expenses</div><div className="stat-value money" style={{fontSize:22}}>{formatKES(total)}</div></div>
+        <div className="stat-card blue"><div className="stat-label">Records</div><div className="stat-value">{expenses.length}</div></div>
+      </div>
+
+      <div className="table-card">
+        <div className="table-header">
+          <span className="table-title">📋 Expenses ({expenses.length})</span>
+          <button className="btn btn-primary btn-sm" onClick={()=>{setForm({date:nowStr()});setModal(true);}}>+ Add Expense</button>
+        </div>
+        <table>
+          <thead><tr><th>Category</th><th>Amount</th><th>Date</th><th>Description</th><th></th></tr></thead>
+          <tbody>
+            {expenses.length===0 ? (
+              <tr><td colSpan={5} style={{textAlign:'center',color:'var(--muted)',padding:30}}>No expenses recorded</td></tr>
+            ) : [...expenses].sort((a,b)=>new Date(b.date||0)-new Date(a.date||0)).map(e => (
+              <tr key={e.id}>
+                <td><div className="member-name">{e.expense_name}</div></td>
+                <td><span className="money" style={{color:'var(--danger)'}}>{formatKES(e.amount)}</span></td>
+                <td style={{fontSize:12,color:'var(--muted)'}}>{e.date}</td>
+                <td style={{fontSize:12,color:'var(--muted)'}}>{e.description}</td>
+                <td><button className="btn btn-danger btn-sm" onClick={()=>del(e)}>🗑</button></td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+
+      {modal && (
+        <div className="modal-overlay" onClick={e=>e.target===e.currentTarget&&setModal(false)}>
+          <div className="modal">
+            <div className="modal-header"><span className="modal-title">ADD EXPENSE</span><button className="close-btn" onClick={()=>setModal(false)}>✕</button></div>
+            <div className="modal-body">
+              <div className="form-group"><label>Category *</label>
+                <select className="form-control" value={form.expense_name||''} onChange={e=>setForm(f=>({...f,expense_name:e.target.value}))}>
+                  <option value="">Select category…</option>
+                  {EXPENSE_CATS.map(c=><option key={c}>{c}</option>)}
+                </select>
+              </div>
+              <div className="form-row">
+                <div className="form-group"><label>Amount (KES) *</label><input className="form-control" type="number" value={form.amount||''} onChange={e=>setForm(f=>({...f,amount:e.target.value}))} /></div>
+                <div className="form-group"><label>Date</label><input className="form-control" type="date" value={form.date||''} onChange={e=>setForm(f=>({...f,date:e.target.value}))} /></div>
+              </div>
+              <div className="form-group"><label>Description</label><textarea className="form-control" rows={3} value={form.description||''} onChange={e=>setForm(f=>({...f,description:e.target.value}))} style={{resize:'vertical'}} /></div>
+            </div>
+            <div className="modal-footer">
+              <button className="btn btn-ghost" onClick={()=>setModal(false)}>Cancel</button>
+              <button className="btn btn-primary" onClick={save} disabled={busy}>{busy?'Saving…':'📋 Add Expense'}</button>
+            </div>
+          </div>
+        </div>
+      )}
+    </>
+  );
+}
+
+// ── REPORTS ───────────────────────────────────────────────────────────────────
+function Reports({ members, contributions, expenses }) {
+  const totalIn  = contributions.reduce((s,c)=>s+Number(c.amount||0),0);
+  const totalOut = expenses.reduce((s,e)=>s+Number(e.amount||0),0);
+  const balance  = totalIn - totalOut;
+
+  // Top contributors
+  const memberTotals = members.map(m => ({
+    ...m,
+    total: contributions.filter(c=>c.member_id===m.id).reduce((s,c)=>s+Number(c.amount||0),0)
+  })).sort((a,b)=>b.total-a.total);
+
+  // Monthly breakdown
+  const monthly = {};
+  MONTHS.forEach(m => monthly[m] = { in:0, out:0 });
+  contributions.forEach(c => { if(c.month && monthly[c.month]) monthly[c.month].in += Number(c.amount||0); });
+  expenses.forEach(e => {
+    const mn = e.date ? monthNames[new Date(e.date).getMonth()] + '.' : null;
+    const full = MONTHS.find(m => m.startsWith(mn?.replace('.','') || ''));
+    if(full && monthly[full]) monthly[full].out += Number(e.amount||0);
+  });
+
+  const printReport = () => window.print();
+
+  return (
+    <>
+      <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:20}}>
+        <h2 style={{fontFamily:'Bebas Neue',letterSpacing:2,fontSize:22}}>Financial Summary 2024</h2>
+        <button className="btn btn-outline btn-sm" onClick={printReport}>🖨 Print Report</button>
+      </div>
+
+      <div className="stats-grid">
+        <div className="stat-card green"><div className="stat-label">Total Income</div><div className="stat-value money" style={{fontSize:22}}>{formatKES(totalIn)}</div></div>
+        <div className="stat-card red"><div className="stat-label">Total Expenses</div><div className="stat-value money" style={{fontSize:22}}>{formatKES(totalOut)}</div></div>
+        <div className={`stat-card ${balance>=0?'blue':'red'}`}><div className="stat-label">Net Balance</div><div className="stat-value money" style={{fontSize:22,color:balance>=0?'var(--green)':'var(--danger)'}}>{formatKES(balance)}</div></div>
+      </div>
+
+      <div className="chart-grid">
+        <div className="table-card">
+          <div className="table-header"><span className="table-title">🏆 Top Contributors</span></div>
+          <table>
+            <thead><tr><th>Rank</th><th>Member</th><th>Total</th><th>Share</th></tr></thead>
+            <tbody>
+              {memberTotals.map((m,i) => (
+                <tr key={m.id}>
+                  <td style={{fontFamily:'Bebas Neue',fontSize:18,color:i===0?'#FFD700':i===1?'#C0C0C0':i===2?'#CD7F32':'var(--muted)'}}>{i+1}</td>
+                  <td>
+                    <div className="member-row">
+                      <div className="avatar">{initials(m.fullname)}</div>
+                      <div className="member-name">{m.fullname}</div>
+                    </div>
+                  </td>
+                  <td><span className="money">{formatKES(m.total)}</span></td>
+                  <td>
+                    <div style={{minWidth:80}}>
+                      <div className="progress-bar"><div className="progress-fill" style={{width:`${totalIn>0?Math.round((m.total/totalIn)*100):0}%`}}/></div>
+                      <div style={{fontSize:11,color:'var(--muted)',marginTop:3}}>{totalIn>0?Math.round((m.total/totalIn)*100):0}%</div>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+        <div className="table-card">
+          <div className="table-header"><span className="table-title">📅 Monthly Breakdown</span></div>
+          <table>
+            <thead><tr><th>Month</th><th>In</th><th>Out</th></tr></thead>
+            <tbody>
+              {MONTHS.map(m => (monthly[m]?.in > 0 || monthly[m]?.out > 0) && (
+                <tr key={m}>
+                  <td style={{fontSize:12}}>{m}</td>
+                  <td><span className="money" style={{color:'var(--green)',fontSize:12}}>{formatKES(monthly[m]?.in||0)}</span></td>
+                  <td><span className="money" style={{color:'var(--danger)',fontSize:12}}>{formatKES(monthly[m]?.out||0)}</span></td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      {/* Outstanding members */}
+      <div className="table-card" style={{marginTop:16}}>
+        <div className="table-header"><span className="table-title">⚠️ Members with No Contributions</span></div>
+        <table>
+          <thead><tr><th>Member</th><th>Phone</th><th>Position</th><th>Status</th></tr></thead>
+          <tbody>
+            {memberTotals.filter(m=>m.total===0).map(m=>(
+              <tr key={m.id}>
+                <td><div className="member-row"><div className="avatar">{initials(m.fullname)}</div><div className="member-name">{m.fullname}</div></div></td>
+                <td style={{fontFamily:'monospace',fontSize:12}}>{m.phone}</td>
+                <td>{m.position}</td>
+                <td><span className={`badge badge-${m.status==='Active'?'active':'inactive'}`}>{m.status}</span></td>
+              </tr>
+            ))}
+            {memberTotals.filter(m=>m.total===0).length===0 && (
+              <tr><td colSpan={4} style={{textAlign:'center',color:'var(--green)',padding:20}}>✅ All members have contributed!</td></tr>
+            )}
+          </tbody>
+        </table>
+      </div>
+    </>
+  );
+}
+
+// ── ANNOUNCEMENTS ─────────────────────────────────────────────────────────────
+function Announcements({ announcements, isDemo, setAnnouncements }) {
+  const [modal, setModal] = useState(false);
+  const [form,  setForm]  = useState({});
+  const [busy,  setBusy]  = useState(false);
+
+  const save = async () => {
+    if (!form.title || !form.message) return alert('Title and message are required');
+    setBusy(true);
+    const data = { title:form.title, message:form.message, type:form.type||'General', created_at: new Date().toISOString() };
+    if (isDemo) {
+      setAnnouncements(prev=>[{...data,id:Date.now().toString()},...prev]);
+      setBusy(false); setModal(false); setForm({}); return;
+    }
+    await FB().addDoc(FB().collection(FB().db,'announcements'), data);
+    setBusy(false); setModal(false); setForm({});
+  };
+
+  const del = async a => {
+    if (!confirm('Delete this announcement?')) return;
+    if (isDemo) { setAnnouncements(prev=>prev.filter(x=>x.id!==a.id)); return; }
+    await FB().deleteDoc(FB().doc(FB().db,'announcements',a.id));
+  };
+
+  return (
+    <>
+      <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:20}}>
+        <span style={{color:'var(--muted)',fontSize:14}}>{announcements.length} announcements</span>
+        <button className="btn btn-primary btn-sm" onClick={()=>{setForm({type:'General'});setModal(true);}}>📢 Post Announcement</button>
+      </div>
+
+      {announcements.length===0 ? (
+        <div className="empty-state"><div className="empty-icon">📢</div><div className="empty-text">No announcements yet. Post your first one!</div></div>
+      ) : announcements.map(a => (
+        <div key={a.id} className="announcement-card">
+          <div style={{display:'flex',justifyContent:'space-between',alignItems:'flex-start'}}>
+            <div>
+              <span className="ann-tag">{a.type}</span>
+              <div className="ann-title" style={{marginTop:8}}>{a.title}</div>
+              <div className="ann-body">{a.message}</div>
+              <div className="ann-date">{a.created_at ? new Date(a.created_at?.seconds ? a.created_at.seconds*1000 : a.created_at).toLocaleString('en-KE') : '—'}</div>
+            </div>
+            <button className="btn btn-danger btn-sm" onClick={()=>del(a)} style={{marginLeft:16,flexShrink:0}}>🗑</button>
+          </div>
+        </div>
+      ))}
+
+      {modal && (
+        <div className="modal-overlay" onClick={e=>e.target===e.currentTarget&&setModal(false)}>
+          <div className="modal">
+            <div className="modal-header"><span className="modal-title">POST ANNOUNCEMENT</span><button className="close-btn" onClick={()=>setModal(false)}>✕</button></div>
+            <div className="modal-body">
+              <div className="form-group"><label>Type</label>
+                <select className="form-control" value={form.type||'General'} onChange={e=>setForm(f=>({...f,type:e.target.value}))}>
+                  {ANN_TYPES.map(t=><option key={t}>{t}</option>)}
+                </select>
+              </div>
+              <div className="form-group"><label>Title *</label><input className="form-control" placeholder="e.g. Match Day vs Rift Valley Rangers" value={form.title||''} onChange={e=>setForm(f=>({...f,title:e.target.value}))} /></div>
+              <div className="form-group"><label>Message *</label><textarea className="form-control" rows={5} value={form.message||''} onChange={e=>setForm(f=>({...f,message:e.target.value}))} style={{resize:'vertical'}} /></div>
+            </div>
+            <div className="modal-footer">
+              <button className="btn btn-ghost" onClick={()=>setModal(false)}>Cancel</button>
+              <button className="btn btn-primary" onClick={save} disabled={busy}>{busy?'Posting…':'📢 Post'}</button>
+            </div>
+          </div>
+        </div>
+      )}
+    </>
+  );
+}
+
+// ── RENDER ────────────────────────────────────────────────────────────────────
+ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+</script>
+</body>
+</html>
